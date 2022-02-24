@@ -25,16 +25,15 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 # only use orderSerializer in view and nest other in orderSerializer
 class OrderSerializer(serializers.ModelSerializer):
-    
-    orders = serializers.SerializerMethodField(read_only=True)
-    shipping = serializers.SerializerMethodField(read_only=True)
+    orderItems = serializers.SerializerMethodField(read_only=True)
+    shippingAddress = serializers.SerializerMethodField(read_only=True)
     user = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Order
         fields = '__all__'
     # when got the order, make queries for child and parent elements
     # return as nested objects
-    def get_orders(self,obj):
+    def get_orderItems(self,obj):
         items = obj.orderitem_set.all()
         serializer = OrderItemSerializer(items, many=True)
         return serializer.data
@@ -46,7 +45,7 @@ class OrderSerializer(serializers.ModelSerializer):
             address = False
         return address
     
-    def get_users(self, obj):
+    def get_user(self, obj):
         user = obj.user
         serializer = UserSerializer(user, many=False)
         return serializer.data

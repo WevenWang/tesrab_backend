@@ -17,7 +17,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import status
 
 @api_view(['POST'])
-@permission_classes(['isAuthenticated'])
+@permission_classes([IsAuthenticated])
 def addOrderItems(request):
 
     # get user data
@@ -36,12 +36,12 @@ def addOrderItems(request):
             user = user,
             paymentMethod = data['paymentMethod'],
             taxPrice=data['taxPrice'],
-            shippingPrince= data['shippingPrice'],
-            totalPrince=data['totalPrice'],
+            shippingPrice= data['shippingPrice'],
+            totalPrice=data['totalPrice'],
         )
 
         # 2. create shipping address
-        shipping = ShippingAddress.object.create(
+        shipping = ShippingAddress.objects.create(
             order=order,
             address=data['shippingAddress']['address'],
             city=data['shippingAddress']['city'],
@@ -61,7 +61,8 @@ def addOrderItems(request):
             )
 
         # 4. update stock
-            product.countInStock -= item.qty
+            product.countInStock -= int(item.qty)
             product.save()
+
     serializer = OrderSerializer(order, many=False)
     return Response(serializer.data)
