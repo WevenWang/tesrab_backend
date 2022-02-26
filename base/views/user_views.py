@@ -53,7 +53,7 @@ def resgisterUser(request):
         message = {'detail': 'User with this email already exists'}
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-# get all the users
+# get all the users for admin user
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def getUsers(request):
@@ -61,6 +61,43 @@ def getUsers(request):
     # many flag means we are serializing multiple objects
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
+
+# get the specific user
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def getUserById(request, pk):
+    user = User.objects.get(id=pk)
+    # many flag means we are serializing multiple objects
+    serializer = UserSerializer(user, many=False)
+    return Response(serializer.data)
+
+# get the user profile
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def updateUser(request, pk):
+    user = User.objects.get(id=pk)
+    # many flag means we are serializing multiple objects
+    data = request.data
+
+    user.first_name = data['name']
+    user.username = data['email']
+    user.email = data['email']
+    user.is_staff = data['isAdmin']
+
+    serializer = UserSerializerWithToken(user, many=False)
+
+    user.save()
+
+    return Response(serializer.data)
+
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def deleteUser(request, pk):
+    user_to_delete = User.objects.get(id=pk)
+    user_to_delete.delete()
+    return Response('User was deleted')
 
 # get the user profile
 @api_view(['GET'])
