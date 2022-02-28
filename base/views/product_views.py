@@ -1,4 +1,7 @@
 
+from itertools import product
+from math import prod
+from urllib.request import Request
 from wsgiref.util import request_uri
 
 
@@ -8,8 +11,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 
-from base.models import Product
+from base.models import Product, Review
 from base.serializers import ProductSerializer
+from rest_framework import status
 
 @api_view(['GET'])
 def getProducts(request):
@@ -84,3 +88,45 @@ def upload_image(request):
     product.image = request.FILES.get('image')
     product.save()
     return Response('Image was uploaded')
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_product_review(request, pk):
+    product = Product.objects.get(_id=pk)
+    user = request.user
+    data = request.data
+
+    # if review already exists for a user, do not allow duplicate
+    alreadyExists = product.review_set.filter(user=user).exists()
+
+    if alreadyExists:
+        content = {'detail': 'You already reviewed this product.'}
+        return Response(content, status=status.HTTP_400_BAD_REQUEST)
+
+    # if customer submit a review without a rating / or zero rating
+    elif data['rating'] == 0:
+        content = {'detail': 'Please select a valid rating.'}
+        return Response(content, status=status.HTTP_400_BAD_REQUEST)
+
+    # create review
+    else:
+        review = Review.objects.create(
+            user=user,
+            product=product,
+            name=user.first_name,
+            rating=data['rating'],
+            comment=data['comment'],
+        )
+
+        # update number of reviews
+        reviews = product.review_set.all()
+        product.numReviews = len(reviews)
+
+        totalRating = 0
+        for i in reviews:
+            totalRating += i.rating
+        
+        product.rating = totalRating / product.numReviews
+        product.save()
+
+        return Response('Review added')
