@@ -1,6 +1,4 @@
 
-from itertools import product
-from math import prod
 from urllib.request import Request
 from wsgiref.util import request_uri
 
@@ -15,13 +13,48 @@ from base.models import Product, Review
 from base.serializers import ProductSerializer
 from rest_framework import status
 
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
 @api_view(['GET'])
 def getProducts(request):
-    products = Product.objects.all()
+
+    # search product
+    query = request.query_params.get('keyword')
+    print('query: ', query)
+    if query == None:
+        query = ''
+
+    # icontains means case insensitive
+    products = Product.objects.filter(name__icontains=query)
+
+    # paginate the products
+    page = request.query_params.get('page')
+    paginator = Paginator(products, 5)
+
+
+    try:
+        products = paginator.page(page)
+    except PageNotAnInteger:
+        products = paginator.page(1)
+    except EmptyPage:
+        # when user go beyond the actual page range, go to the last possible page
+        products = paginator.page(paginator.num_pages)
+
+    if page == None:
+        page = 1
+
+
     # many flag means we are serializing multiple objects
     serializer = ProductSerializer(products, many=True)
-    return Response(serializer.data)
+    return Response({'products': serializer.data, 'page': int(page), 'pages': paginator.num_pages})
 
+# for product slide show
+@api_view(['GET'])
+def get_top_products(request):
+    # gte => greater than or equal to 4
+    products = Product.objects.filter(rating__gte=4).order_by('-rating')[0:5] # specify the top 5 products
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data)
 
 @api_view(['GET'])
 def getProduct(request, pk):
